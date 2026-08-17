@@ -1,24 +1,59 @@
 {
   "expo": {
-    "name": "jaap-mala-mobile",
+    "name": "Nityam Jap",
     "slug": "jaap-mala-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/app_icon_custom.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jaapmala.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Nityam Jap uses the microphone for real-time voice-activated mantra chanting.",
+        "NSSpeechRecognitionUsageDescription": "Nityam Jap uses speech recognition to count your sacred mantra chants accurately in real time.",
+        "UIBackgroundModes": ["audio"],
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.jaapmala.app",
+      "versionCode": 1,
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+        "backgroundColor": "#E05E26",
+        "foregroundImage": "./assets/app_icon_custom.png"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.INTERNET"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-speech-recognition",
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ecde6a6c-4bbb-4830-b0c6-f358c051c1fb"
+      }
+    },
+    "owner": "rahulverma29s-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ecde6a6c-4bbb-4830-b0c6-f358c051c1fb"
     }
   }
 }
