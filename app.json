@@ -49,9 +49,7 @@
       }
     },
     "owner": "rahulverma29s-team",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/ecde6a6c-4bbb-4830-b0c6-f358c051c1fb"
     }

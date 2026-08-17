@@ -75,6 +75,7 @@ class FloatingBeadModule(private val reactContext: ReactApplicationContext) :
             }
 
             val intent = Intent(reactContext, FloatingBeadService::class.java).apply {
+                action = FloatingBeadService.ACTION_SHOW
                 putExtra(FloatingBeadService.EXTRA_COUNT, currentCount)
                 putExtra(FloatingBeadService.EXTRA_MALA, selectedMala)
             }
@@ -106,7 +107,9 @@ class FloatingBeadModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun hideFloatingBead() {
         try {
-            val intent = Intent(reactContext, FloatingBeadService::class.java)
+            val intent = Intent(reactContext, FloatingBeadService::class.java).apply {
+                action = FloatingBeadService.ACTION_HIDE
+            }
             reactContext.stopService(intent)
         } catch (e: Exception) {
             e.printStackTrace()

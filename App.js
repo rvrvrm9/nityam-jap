@@ -29,7 +29,7 @@ import { TRANSLATIONS } from "./src/constants/translations";
 import { FloatingBeadService } from "./src/services/floatingBeadService";
 
 const STORAGE_KEY = "JAAP_MALA_MOBILE_STATE";
-export const APK_SHARE_LINK = "https://expo.dev/artifacts/eas/_TJ3NAyXVJy6kDWGcdUDjZIr6myO8boWilj8G41k7i0.apk";
+export const APK_SHARE_LINK = "https://expo.dev/artifacts/eas/ED1s8UVNlG10TzWAv6RvxoUfTUSex1TA6wLf_HkDccM.apk";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const LAYOUT_WIDTH = Platform.OS === "web" ? Math.min(420, SCREEN_WIDTH) : SCREEN_WIDTH;
 
@@ -691,6 +691,16 @@ function getActiveMantraTextAndSettings(malaId, tulsiMantra, activeMantraKey) {
   }, []);
 
   const handleToggleFloatingBead = async () => {
+    if (!FloatingBeadService.isAvailable()) {
+      Alert.alert(
+        appLanguage === "en" ? "Feature Notice" : "फ़ीचर सूचना",
+        appLanguage === "en"
+          ? "Floating Bead overlay requires the Standalone Android APK build. Please install the latest APK."
+          : "फ्लोटिंग मनका फ़ीचर एंड्रॉइड स्टैंडअलोन APK में काम करता है। कृपया नया APK इंस्टॉल करें।"
+      );
+      return;
+    }
+
     const nextVal = !floatingBeadEnabled;
     if (nextVal) {
       const hasPermission = await FloatingBeadService.checkPermission();
@@ -699,22 +709,29 @@ function getActiveMantraTextAndSettings(malaId, tulsiMantra, activeMantraKey) {
           appLanguage === "en" ? "Permission Required" : "अनुमति आवश्यक है",
           appLanguage === "en"
             ? "To show floating bead on your screen while using other apps, please enable 'Display over other apps' permission."
-            : "ऐप मिनिमाइज़ होने पर स्क्रीन पर फ्लोटिंग मनका दिखाने के लिए 'अन्य ऐप्स के ऊपर दिखाएं' (Display over other apps) की अनुमति आवश्यक है।",
+            : "स्क्रीन पर फ्लोटिंग मनका दिखाने के लिए 'अन्य ऐप्स के ऊपर दिखाएं' (Display over other apps) की अनुमति आवश्यक है।",
           [
             { text: t("cancelBtn"), style: "cancel" },
             {
               text: appLanguage === "en" ? "Open Settings" : "सेटिंग्स खोलें",
               onPress: () => {
                 FloatingBeadService.requestPermission();
-                setFloatingBeadEnabled(true);
-                floatingBeadEnabledRef.current = true;
-                AsyncStorage.setItem("JAAP_MALA_FLOATING_BEAD", "true").catch(() => {});
               }
             }
           ]
         );
         return;
       }
+      FloatingBeadService.showFloatingBead(
+        currentCountRef.current,
+        selectedMalaRef.current || "rudraksha"
+      );
+      Alert.alert(
+        appLanguage === "en" ? "Floating Bead Activated" : "फ्लोटिंग मनका सक्रिय",
+        appLanguage === "en"
+          ? "Floating bead is now active on your screen. You can chant while using other apps!"
+          : "फ्लोटिंग मनका आपकी स्क्रीन पर चालू हो गया है! आप कोई भी ऐप चलाते हुए स्क्रीन पर मनका टैप करके जप कर सकते हैं।"
+      );
     } else {
       FloatingBeadService.hideFloatingBead();
     }

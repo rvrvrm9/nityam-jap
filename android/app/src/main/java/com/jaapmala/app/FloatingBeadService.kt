@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
@@ -46,7 +47,7 @@ class FloatingBeadService : Service() {
     private var initialTouchY = 0f
     private var lastTapTime: Long = 0
     private val DOUBLE_TAP_THRESHOLD = 300L
-    private val CLICK_DRAG_TOLERANCE = 10f
+    private val CLICK_DRAG_TOLERANCE = 15f
 
     companion object {
         var isRunning = false
@@ -54,6 +55,8 @@ class FloatingBeadService : Service() {
         const val NOTIFICATION_ID = 108
         const val EXTRA_COUNT = "extra_count"
         const val EXTRA_MALA = "extra_mala"
+        const val ACTION_SHOW = "com.jaapmala.app.ACTION_SHOW"
+        const val ACTION_HIDE = "com.jaapmala.app.ACTION_HIDE"
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -67,205 +70,234 @@ class FloatingBeadService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.let {
-            currentCount = it.getIntExtra(EXTRA_COUNT, currentCount)
-            selectedMala = it.getStringExtra(EXTRA_MALA) ?: selectedMala
+            if (it.hasExtra(EXTRA_COUNT)) {
+                currentCount = it.getIntExtra(EXTRA_COUNT, currentCount)
+            }
+            if (it.hasExtra(EXTRA_MALA)) {
+                selectedMala = it.getStringExtra(EXTRA_MALA) ?: selectedMala
+            }
             updateBeadDrawable()
             updateCountDisplay()
+
+            val action = it.action
+            if (action == ACTION_HIDE) {
+                floatingView?.visibility = View.GONE
+            } else {
+                floatingView?.visibility = View.VISIBLE
+            }
         }
         return START_STICKY
     }
 
     private fun startForegroundNotification() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "नित्यम जप साधना (Floating Bead)",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "फ्लोटिंग मनका एक्टिव है"
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    CHANNEL_ID,
+                    "नित्यम जप साधना (Floating Bead)",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "फ्लोटिंग मनका स्क्रीन पर सक्रिय है"
+                    setShowBadge(false)
+                }
+                val manager = getSystemService(NotificationManager::class.java)
+                manager?.createNotificationChannel(channel)
             }
-            val manager = getSystemService(NotificationManager::class.java)
-            manager?.createNotificationChannel(channel)
+
+            val launchIntent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                launchIntent,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+            )
+
+            val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("नित्यम जप साधना 📿")
+                .setContentText("फ्लोटिंग मनका सक्रिय है। स्क्रीन पर टैप करके जाप करें।")
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                    } else {
+                        0
+                    }
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-
-        val launchIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            launchIntent,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
-        )
-
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("नित्यम जप साधना 📿")
-            .setContentText("फ्लोटिंग मनका स्क्रीन पर सक्रिय है। टैप करके जप करें।")
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
-
-        startForeground(NOTIFICATION_ID, notification)
     }
 
     private fun initFloatingView() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            stopSelf()
             return
         }
 
-        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-
-        val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-
-        params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            layoutType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = 30
-            y = 250
-        }
-
-        // Main Container Frame
-        val density = resources.displayMetrics.density
-        floatingView = FrameLayout(this).apply {
-            setPadding(10, 10, 10, 10)
-        }
-
-        // Inner Vertical Layout
-        val innerLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-        }
-
-        // Bead Container Frame (With circular glow background)
-        val beadFrame = FrameLayout(this).apply {
-            val size = (68 * density).toInt()
-            layoutParams = LinearLayout.LayoutParams(size, size)
-            val glowBg = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#40E05E26"))
-                setStroke((2 * density).toInt(), Color.parseColor("#FFE0B2"))
-            }
-            background = glowBg
-            setPadding(4, 4, 4, 4)
-        }
-
-        // Bead Image View
-        beadImageView = ImageView(this).apply {
-            val size = (60 * density).toInt()
-            layoutParams = FrameLayout.LayoutParams(size, size, Gravity.CENTER)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            setImageResource(getBeadDrawableResource(selectedMala))
-        }
-        beadFrame.addView(beadImageView)
-
-        // Close Small 'X' Button on top-right of bead
-        val closeBtn = TextView(this).apply {
-            text = "✕"
-            textSize = 10f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            val btnSize = (20 * density).toInt()
-            layoutParams = FrameLayout.LayoutParams(btnSize, btnSize, Gravity.TOP or Gravity.END)
-            val btnBg = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#D32F2F"))
-                setStroke((1 * density).toInt(), Color.WHITE)
-            }
-            background = btnBg
-            setOnClickListener {
-                stopSelf()
-            }
-        }
-        beadFrame.addView(closeBtn)
-
-        innerLayout.addView(beadFrame)
-
-        // Count Badge Pill
-        countTextView = TextView(this).apply {
-            val lp = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = (3 * density).toInt()
-            }
-            layoutParams = lp
-            text = "$currentCount/108"
-            textSize = 11f
-            setTextColor(Color.parseColor("#FFFFFF"))
-            gravity = Gravity.CENTER
-            setPadding((8 * density).toInt(), (2 * density).toInt(), (8 * density).toInt(), (2 * density).toInt())
-            val pillBg = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 12 * density
-                setColor(Color.parseColor("#E05E26"))
-                setStroke((1 * density).toInt(), Color.parseColor("#FFFFFF"))
-            }
-            background = pillBg
-        }
-        innerLayout.addView(countTextView)
-
-        floatingView?.addView(innerLayout)
-
-        // Touch & Drag Listener
-        floatingView?.setOnTouchListener(object : View.OnTouchListener {
-            override fun onTouch(v: View?, event: MotionEvent?): Boolean {
-                if (event == null || params == null) return false
-
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        initialX = params!!.x
-                        initialY = params!!.y
-                        initialTouchX = event.rawX
-                        initialTouchY = event.rawY
-                        return true
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        val dx = (event.rawX - initialTouchX).toInt()
-                        val dy = (event.rawY - initialTouchY).toInt()
-                        params!!.x = initialX + dx
-                        params!!.y = initialY + dy
-                        try {
-                            windowManager?.updateViewLayout(floatingView, params)
-                        } catch (_: Exception) {}
-                        return true
-                    }
-                    MotionEvent.ACTION_UP -> {
-                        val dx = Math.abs(event.rawX - initialTouchX)
-                        val dy = Math.abs(event.rawY - initialTouchY)
-
-                        // If moved very little, it's a TAP!
-                        if (dx < CLICK_DRAG_TOLERANCE * density && dy < CLICK_DRAG_TOLERANCE * density) {
-                            val currentTime = System.currentTimeMillis()
-                            if (currentTime - lastTapTime < DOUBLE_TAP_THRESHOLD) {
-                                // Double tap -> Open App
-                                openMainActivity()
-                            } else {
-                                // Single tap -> Increment Jaap Count!
-                                onBeadTapped()
-                            }
-                            lastTapTime = currentTime
-                        }
-                        return true
-                    }
-                }
-                return false
-            }
-        })
-
         try {
+            windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+
+            val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_PHONE
+            }
+
+            params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                layoutType,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = 40
+                y = 350
+            }
+
+            val density = resources.displayMetrics.density
+            floatingView = FrameLayout(this).apply {
+                setPadding(8, 8, 8, 8)
+                clipChildren = false
+                clipToPadding = false
+            }
+
+            val innerLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                clipChildren = false
+                clipToPadding = false
+            }
+
+            // Bead Frame with glow
+            val beadFrame = FrameLayout(this).apply {
+                val size = (64 * density).toInt()
+                layoutParams = LinearLayout.LayoutParams(size, size)
+                val glowBg = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Color.parseColor("#33E05E26"))
+                    setStroke((2 * density).toInt(), Color.parseColor("#FFA726"))
+                }
+                background = glowBg
+                setPadding(4, 4, 4, 4)
+                clipChildren = false
+                clipToPadding = false
+            }
+
+            // Bead Image
+            beadImageView = ImageView(this).apply {
+                val size = (56 * density).toInt()
+                layoutParams = FrameLayout.LayoutParams(size, size, Gravity.CENTER)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setImageResource(getBeadDrawableResource(selectedMala))
+            }
+            beadFrame.addView(beadImageView)
+
+            // Close button
+            val closeBtn = TextView(this).apply {
+                text = "✕"
+                textSize = 9f
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                val btnSize = (18 * density).toInt()
+                layoutParams = FrameLayout.LayoutParams(btnSize, btnSize, Gravity.TOP or Gravity.END)
+                val btnBg = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(Color.parseColor("#E53935"))
+                    setStroke((1 * density).toInt(), Color.WHITE)
+                }
+                background = btnBg
+                setOnClickListener {
+                    stopSelf()
+                }
+            }
+            beadFrame.addView(closeBtn)
+
+            innerLayout.addView(beadFrame)
+
+            // Count Badge
+            countTextView = TextView(this).apply {
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = (2 * density).toInt()
+                }
+                layoutParams = lp
+                text = "$currentCount/108"
+                textSize = 10.5f
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                setPadding((7 * density).toInt(), (1 * density).toInt(), (7 * density).toInt(), (1 * density).toInt())
+                val pillBg = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 10 * density
+                    setColor(Color.parseColor("#E05E26"))
+                    setStroke((1 * density).toInt(), Color.WHITE)
+                }
+                background = pillBg
+            }
+            innerLayout.addView(countTextView)
+
+            floatingView?.addView(innerLayout)
+
+            // Touch Listener on Bead Frame
+            beadFrame.setOnTouchListener(object : View.OnTouchListener {
+                override fun onTouch(v: View?, event: MotionEvent?): Boolean {
+                    if (event == null || params == null) return false
+
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            initialX = params!!.x
+                            initialY = params!!.y
+                            initialTouchX = event.rawX
+                            initialTouchY = event.rawY
+                            return true
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val dx = (event.rawX - initialTouchX).toInt()
+                            val dy = (event.rawY - initialTouchY).toInt()
+                            params!!.x = initialX + dx
+                            params!!.y = initialY + dy
+                            try {
+                                windowManager?.updateViewLayout(floatingView, params)
+                            } catch (_: Exception) {}
+                            return true
+                        }
+                        MotionEvent.ACTION_UP -> {
+                            val dx = Math.abs(event.rawX - initialTouchX)
+                            val dy = Math.abs(event.rawY - initialTouchY)
+
+                            if (dx < CLICK_DRAG_TOLERANCE * density && dy < CLICK_DRAG_TOLERANCE * density) {
+                                val currentTime = System.currentTimeMillis()
+                                if (currentTime - lastTapTime < DOUBLE_TAP_THRESHOLD) {
+                                    openMainActivity()
+                                } else {
+                                    onBeadTapped()
+                                }
+                                lastTapTime = currentTime
+                            }
+                            return true
+                        }
+                    }
+                    return false
+                }
+            })
+
             windowManager?.addView(floatingView, params)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -292,7 +324,7 @@ class FloatingBeadService : Service() {
 
         if (currentCount >= 108) {
             currentCount = 0
-            triggerVibration(true) // Completion vibration
+            triggerVibration(true)
         }
 
         updateCountDisplay()
@@ -351,10 +383,14 @@ class FloatingBeadService : Service() {
     }
 
     private fun openMainActivity() {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        try {
+            val intent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        startActivity(intent)
     }
 
     override fun onDestroy() {
