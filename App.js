@@ -29,7 +29,7 @@ import { TRANSLATIONS } from "./src/constants/translations";
 import { FloatingBeadService } from "./src/services/floatingBeadService";
 
 const STORAGE_KEY = "JAAP_MALA_MOBILE_STATE";
-export const APK_SHARE_LINK = "https://expo.dev/artifacts/eas/ED1s8UVNlG10TzWAv6RvxoUfTUSex1TA6wLf_HkDccM.apk";
+export const APK_SHARE_LINK = "https://expo.dev/artifacts/eas/SYekiZebvDlyBim__Mb4JMWW50CRZQkN030utaF3U6M.apk";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const LAYOUT_WIDTH = Platform.OS === "web" ? Math.min(420, SCREEN_WIDTH) : SCREEN_WIDTH;
 
