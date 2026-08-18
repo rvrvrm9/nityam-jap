@@ -31,7 +31,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
 }
 expoAutolinking.useExpoModules()
 
-rootProject.name = 'jaap-mala-mobile'
+rootProject.name = 'Nityam Jap'
 
 expoAutolinking.useExpoVersionCatalog()
 

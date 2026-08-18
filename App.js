@@ -678,7 +678,8 @@ function getActiveMantraTextAndSettings(malaId, tulsiMantra, activeMantraKey) {
           );
         }
       } else if (nextAppState === "active") {
-        FloatingBeadService.updateCount(currentCountRef.current);
+        // Hide floating bead when inside the main app
+        FloatingBeadService.hideFloatingBead();
       }
     };
 
@@ -722,15 +723,11 @@ function getActiveMantraTextAndSettings(malaId, tulsiMantra, activeMantraKey) {
         );
         return;
       }
-      FloatingBeadService.showFloatingBead(
-        currentCountRef.current,
-        selectedMalaRef.current || "rudraksha"
-      );
       Alert.alert(
-        appLanguage === "en" ? "Floating Bead Activated" : "फ्लोटिंग मनका सक्रिय",
+        appLanguage === "en" ? "Floating Bead Enabled" : "फ्लोटिंग मनका ऑन हुआ",
         appLanguage === "en"
-          ? "Floating bead is now active on your screen. You can chant while using other apps!"
-          : "फ्लोटिंग मनका आपकी स्क्रीन पर चालू हो गया है! आप कोई भी ऐप चलाते हुए स्क्रीन पर मनका टैप करके जप कर सकते हैं।"
+          ? "Floating bead mode is enabled! Whenever you minimize Nityam Jap or use other apps, the sacred bead will appear on your screen."
+          : "फ्लोटिंग मनका ऑन हो गया है! जैसे ही आप ऐप मिनिमाइज़ करेंगे या कोई दूसरा ऐप इस्तेमाल करेंगे, मनका आपकी स्क्रीन पर आ जाएगा।"
       );
     } else {
       FloatingBeadService.hideFloatingBead();

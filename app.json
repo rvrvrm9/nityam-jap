@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Nityam Jap",
-    "slug": "jaap-mala-mobile",
+    "slug": "nityam-jap",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/app_icon_custom.png",
@@ -12,7 +12,9 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Nityam Jap uses the microphone for real-time voice-activated mantra chanting.",
         "NSSpeechRecognitionUsageDescription": "Nityam Jap uses speech recognition to count your sacred mantra chants accurately in real time.",
-        "UIBackgroundModes": ["audio"],
+        "UIBackgroundModes": [
+          "audio"
+        ],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -21,7 +23,7 @@
       "versionCode": 1,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#E05E26",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/app_icon_custom.png"
       },
       "permissions": [
@@ -43,15 +45,12 @@
       "expo-web-browser",
       "@react-native-google-signin/google-signin"
     ],
+    "owner": "rahulverma29",
+    "runtimeVersion": "1.0.0",
     "extra": {
       "eas": {
-        "projectId": "ecde6a6c-4bbb-4830-b0c6-f358c051c1fb"
+        "projectId": "1f6767f1-1647-40da-9286-f700cddaf072"
       }
-    },
-    "owner": "rahulverma29s-team",
-    "runtimeVersion": "1.0.0",
-    "updates": {
-      "url": "https://u.expo.dev/ecde6a6c-4bbb-4830-b0c6-f358c051c1fb"
     }
   }
 }
