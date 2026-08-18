@@ -23,7 +23,7 @@
       "versionCode": 1,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#000000",
+        "backgroundColor": "#F47B00",
         "foregroundImage": "./assets/app_icon_custom.png"
       },
       "permissions": [

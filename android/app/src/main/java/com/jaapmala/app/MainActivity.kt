@@ -58,4 +58,12 @@ class MainActivity : ReactActivity() {
       // because it's doing more than [Activity.moveTaskToBack] in fact.
       super.invokeDefaultOnBackPressed()
   }
+
+  override fun onDestroy() {
+      super.onDestroy()
+      try {
+          val intent = android.content.Intent(this, FloatingBeadService::class.java)
+          stopService(intent)
+      } catch (_: Exception) {}
+  }
 }

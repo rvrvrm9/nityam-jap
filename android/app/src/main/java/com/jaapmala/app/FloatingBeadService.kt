@@ -86,7 +86,7 @@ class FloatingBeadService : Service() {
                 floatingView?.visibility = View.VISIBLE
             }
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun startForegroundNotification() {
@@ -393,6 +393,12 @@ class FloatingBeadService : Service() {
         }
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // Whenever the app is closed/swiped away from recent tasks, automatically stop service & remove bead
+        stopSelf()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
@@ -402,5 +408,13 @@ class FloatingBeadService : Service() {
             } catch (_: Exception) {}
             floatingView = null
         }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+        } catch (_: Exception) {}
     }
 }

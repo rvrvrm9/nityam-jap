@@ -20,6 +20,9 @@ expo-env.d.ts
 credentials.json
 *.log
 *.txt
+*.apk
+*.aab
+android/local.properties
 
 # Android build cache
 android/.gradle/
